@@ -1,0 +1,61 @@
+#!/bin/bash
+
+if [ ! $1 ]
+then
+cat << EOF
+Usage:  pixie [COMMAND]
+
+Commands:
+    new NAME        Create a new instance
+    del NAME        Delete an existing instance
+    enable-all      (dangerous) Make existing instances available over iscsi
+                                Only use this after restarting iscsitarget server
+
+EOF
+fi
+
+
+case "$1" in
+
+"new")  
+    if zfs list | grep $2
+    then
+    echo "This instance already exists. Exiting 1."
+    exit 1
+    fi
+
+    lasttid=$(sed -nr '1s/.*tid:([0-9]*).*/\1/p' /proc/net/iet/volume)
+    newtid=$((lasttid+1))
+
+    zfs snapshot tank/winbase@$2 && \
+    zfs clone tank/winbase@$2 tank/$2 && \
+    ietadm --op new --tid=$newtid --params Name=iqn.lan.hal:instance.$2 && \
+    ietadm --op new --tid=$newtid --lun=0 --params Path=/dev/zvol/tank/$2 && \
+    sed -rn '1s/.*name:(.*)$/\1/p' /proc/net/iet/volume
+    ;;
+"del")
+    if ! grep $2 /proc/net/iet/volume >/dev/null
+    then
+    echo "Instance not found"
+    exit 1
+    fi
+
+    # get the tid from ietadm
+    tid=$(grep $2 /proc/net/iet/volume | sed -nr '1s/.*tid:([0-9]*).*/\1/p')
+    ietadm --op delete --tid=$tid && \
+    zfs destroy tank/$2 && \
+    zfs destroy tank/winbase@$2
+    ;;
+"enable-all")
+    for instance in $(zfs list | sed -rn '/@/s/^tank\/winbase@([^\S ]*) .*$/\1/p')
+    do
+    lasttid=$(sed -nr '1s/.*tid:([0-9]*).*/\1/p' /proc/net/iet/volume)
+    newtid=$((lasttid+1))
+    ietadm --op new --tid=$newtid --params Name=iqn.lan.hal:instance.$instance
+    ietadm --op new --tid=$newtid --lun=0 --params Path=/dev/zvol/tank/$instance
+    done
+    ;;
+*) echo "Invalid command"
+   exit 1
+   ;;
+esac
