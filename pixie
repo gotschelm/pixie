@@ -8,10 +8,12 @@ Usage:  pixie [COMMAND]
 Commands:
     new NAME        Create a new instance
     del NAME        Delete an existing instance
+    list            List info
     enable-all      (dangerous) Make existing instances available over iscsi
                                 Only use this after restarting iscsitarget server
 
 EOF
+exit 1
 fi
 
 
@@ -54,6 +56,12 @@ case "$1" in
     ietadm --op new --tid=$newtid --params Name=iqn.lan.hal:instance.$instance
     ietadm --op new --tid=$newtid --lun=0 --params Path=/dev/zvol/tank/$instance
     done
+    ;;
+"list")
+    echo "[ISCSI]"
+    cat /proc/net/iet/volume
+    echo "[ZFS]"
+    zfs list
     ;;
 *) echo "Invalid command"
    exit 1
