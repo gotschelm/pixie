@@ -7,6 +7,7 @@ Usage:  pixie [COMMAND]
 
 Commands:
     new NAME        Create a new instance
+                    Returns the iscsi target. Exitcode 1 if it already exists.
     del NAME        Delete an existing instance
     list            List info
     enable-all      (dangerous) Make existing instances available over iscsi
@@ -22,7 +23,8 @@ case "$1" in
 "new")  
     if zfs list | grep $2
     then
-    echo "This instance already exists. Exiting 1."
+    #echo "This instance already exists. Exiting 1."
+    grep $2 /proc/net/iet/volume | sed -rn '1s/.*name:(.*)$/\1/p'
     exit 1
     fi
 
@@ -34,6 +36,7 @@ case "$1" in
     ietadm --op new --tid=$newtid --params Name=iqn.lan.hal:instance.$2 && \
     ietadm --op new --tid=$newtid --lun=0 --params Path=/dev/zvol/tank/$2 && \
     sed -rn '1s/.*name:(.*)$/\1/p' /proc/net/iet/volume
+    exit 0
     ;;
 "del")
     if ! grep $2 /proc/net/iet/volume >/dev/null
