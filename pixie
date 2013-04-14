@@ -24,7 +24,7 @@ fi
 case "$1" in
 
 "new")  
-    if zfs list | grep $2
+    if zfs list | grep $2 > /dev/null
     then
     #echo "This instance already exists. Exiting 1."
     grep $2 /proc/net/iet/volume | sed -rn '1s/.*name:(.*)$/\1/p'
