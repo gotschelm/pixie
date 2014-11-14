@@ -37,21 +37,15 @@ case "$1" in
     zfs snapshot tank/winbase@$2 && \
     zfs clone tank/winbase@$2 tank/$2 && \
     ietadm --op new --tid=$newtid --params Name=iqn.lan.hal:instance.$2 && \
-    ietadm --op new --tid=$newtid --lun=0 --params Path=/dev/zvol/tank/$2 && \
+    ietadm --op new --tid=$newtid --lun=0 --params Path=/dev/zvol/tank/$2,Type=blockio && \
     sed -rn '1s/.*name:(.*)$/\1/p' /proc/net/iet/volume
     exit 0
     ;;
 "del")
-    if ! grep $2 /proc/net/iet/volume >/dev/null
-    then
-    echo "Instance not found"
-    exit 1
-    fi
-
     # get the tid from ietadm
     tid=$(grep $2 /proc/net/iet/volume | sed -nr '1s/.*tid:([0-9]*).*/\1/p')
-    ietadm --op delete --tid=$tid && \
-    zfs destroy tank/$2 && \
+    ietadm --op delete --tid=$tid 
+    zfs destroy tank/$2
     zfs destroy tank/winbase@$2
     ;;
 "enable-all")
@@ -60,7 +54,7 @@ case "$1" in
     lasttid=$(sed -nr '1s/.*tid:([0-9]*).*/\1/p' /proc/net/iet/volume)
     newtid=$((lasttid+1))
     ietadm --op new --tid=$newtid --params Name=iqn.lan.hal:instance.$instance
-    ietadm --op new --tid=$newtid --lun=0 --params Path=/dev/zvol/tank/$instance
+    ietadm --op new --tid=$newtid --lun=0 --params Path=/dev/zvol/tank/$instance,Type=blockio
     done
     ;;
 "list")
